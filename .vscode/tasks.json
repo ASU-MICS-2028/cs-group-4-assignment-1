@@ -1,0 +1,209 @@
+{
+  "version": "2.0.0",
+  "windows": {
+    "options": {
+      "shell": {
+        "executable": "cmd.exe",
+        "args": ["/d", "/c"]
+      }
+    }
+  },
+  "tasks": [
+    {
+      "label": "Start everything (database, API, app)",
+      "detail": "Database in Docker, then the API on https://localhost:7443 and the dev UI on http://localhost:5173",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Database: start",
+        "API and app: run"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "First-time setup (install packages and tools)",
+      "detail": "Run once after cloning: npm ci in frontend/ and the root (installs the pre-push checks), dotnet restore and dotnet tool restore in backend/, trust the HTTPS dev certificate",
+      "type": "shell",
+      "command": "npm ci && cd .. && npm ci && cd backend && dotnet restore && dotnet tool restore && dotnet dev-certs https --trust",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Database: start",
+      "detail": "PostgreSQL 18 in Docker on 127.0.0.1:5433 (Docker Desktop must be running)",
+      "type": "shell",
+      "command": "docker compose up -d --wait db",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Database: stop",
+      "detail": "Stops the PostgreSQL container; the data is kept",
+      "type": "shell",
+      "command": "docker compose stop db",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Database: reset (delete all data)",
+      "detail": "Removes the containers and the database volume. The next start re-creates the schema and seed data",
+      "type": "shell",
+      "command": "docker compose down -v",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "API and app: run",
+      "dependsOn": [
+        "API: run",
+        "App: run"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "API: run",
+      "detail": "dotnet run on https://localhost:7443 (also serves the built UI from wwwroot)",
+      "type": "shell",
+      "command": "dotnet run --project StudentPortal.Api",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "group": "run"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^__never__$"
+        },
+        "background": {
+          "activesBegin": "Building",
+          "beginsPattern": "Building",
+          "endsPattern": "Now listening on"
+        }
+      }
+    },
+    {
+      "label": "App: run",
+      "detail": "npm run dev on http://localhost:5173 (sends /api to the API on port 7443)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "group": "run"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^__never__$"
+        },
+        "background": {
+          "beginsPattern": "VITE",
+          "endsPattern": "Local:"
+        }
+      }
+    },
+    {
+      "label": "App: build into API",
+      "detail": "npm run build: type-checks the UI and writes it to backend/StudentPortal.Api/wwwroot",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: security matrix (T1-T8)",
+      "detail": "dotnet test against the Docker database; prints one evidence line per check",
+      "type": "shell",
+      "command": "dotnet test --logger \"console;verbosity=detailed\"",
+      "dependsOn": [
+        "Database: start"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/backend",
+        "env": {
+          "Logging__LogLevel__Default": "Warning"
+        }
+      },
+      "presentation": {
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "IT desk: issue enrollment code",
+      "detail": "Prints a one-time enrollment code for the chosen account (single use, 24 hours)",
+      "type": "shell",
+      "command": "dotnet run --project StudentPortal.Api -- issue-enrollment-code ${input:accountId}",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: run complete portal",
+      "detail": "Builds and starts database + portal in Docker on http://localhost:8080 (no .NET or Node needed)",
+      "type": "shell",
+      "command": "docker compose up --build -d --wait && echo Portal running at http://localhost:8080",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: issue enrollment code",
+      "detail": "Same as the IT desk task, inside the running Docker portal",
+      "type": "shell",
+      "command": "docker compose exec app dotnet StudentPortal.Api.dll issue-enrollment-code ${input:accountId}",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: run security tests",
+      "detail": "Runs the T1-T8 test matrix in a container against the Docker database",
+      "type": "shell",
+      "command": "docker compose run --rm --build tests",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: stop everything",
+      "detail": "Stops and removes the containers; the data is kept",
+      "type": "shell",
+      "command": "docker compose down",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "accountId",
+      "type": "pickString",
+      "description": "Account to issue an enrollment code for",
+      "options": ["S001", "S002", "S003", "L001", "L002"],
+      "default": "S001"
+    }
+  ]
+}

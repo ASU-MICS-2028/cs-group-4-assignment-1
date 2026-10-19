@@ -1,0 +1,57 @@
+# One-command local run:   docker compose up --build      -> http://localhost:8080
+# Security test matrix:     docker compose run --rm tests
+# Reset all data:           docker compose down -v
+#
+# The passwords below are for this local, loopback-only lab database. Override them
+# with environment variables if you wish; none of them protect real data.
+
+name: ics570-portal
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres-local-only}
+      PORTAL_APP_PASSWORD: ${PORTAL_APP_PASSWORD:-portal-app-local-only}
+    volumes:
+      # Same script as the native setup: creates role portal_app and both databases.
+      - ./database/00-create-role-and-databases.sql:/docker-entrypoint-initdb.d/00-create-role-and-databases.sql:ro
+      - portal-db:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build:
+      context: .
+      target: app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+    environment:
+      ConnectionStrings__Portal: Host=db;Database=student_portal;Username=portal_app;Password=${PORTAL_APP_PASSWORD:-portal-app-local-only};GSS Encryption Mode=Disable
+      Portal__Origins__0: http://localhost:8080
+      Portal__ApplyMigrationsOnStartup: "true"
+      Portal__RedirectToHttps: "false"
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  tests:
+    build:
+      context: .
+      target: tests
+    profiles: ["tests"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__PortalTest: Host=db;Database=student_portal_test;Username=portal_app;Password=${PORTAL_APP_PASSWORD:-portal-app-local-only};GSS Encryption Mode=Disable
+      Logging__LogLevel__Default: Warning
+
+volumes:
+  portal-db:

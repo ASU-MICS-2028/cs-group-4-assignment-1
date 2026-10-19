@@ -1,0 +1,15 @@
+set -e
+
+echo "Frontend: ESLint, Prettier, TypeScript"
+npm run check --prefix frontend
+
+echo "Backend: dotnet format, build"
+dotnet format backend/StudentPortal.sln --verify-no-changes
+dotnet build backend/StudentPortal.sln --nologo -warnaserror
+
+if node -e "require('net').connect(5433, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"; then
+  echo "Backend: T1-T8 security tests"
+  dotnet test backend/StudentPortal.sln --nologo --no-build
+else
+  echo "Database on 127.0.0.1:5433 is not running, so the T1-T8 tests were skipped. Run 'docker compose up -d --wait db' to include them."
+fi

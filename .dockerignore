@@ -1,0 +1,8 @@
+.git
+.vs
+docs
+**/bin
+**/obj
+**/node_modules
+**/*.user
+backend/StudentPortal.Api/wwwroot

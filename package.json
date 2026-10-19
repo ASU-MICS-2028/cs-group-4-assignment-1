@@ -1,0 +1,11 @@
+{
+  "name": "cs-group-4-assignment-1",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "check": "npm run check --prefix frontend && dotnet format backend/StudentPortal.sln --verify-no-changes && dotnet build backend/StudentPortal.sln --nologo -warnaserror"
+  },
+  "devDependencies": {
+    "husky": "9.1.7"
+  }
+}
