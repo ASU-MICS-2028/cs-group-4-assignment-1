@@ -33,6 +33,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS app
 WORKDIR /app
 COPY --from=publish /app ./
 USER $APP_UID
-ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "StudentPortal.Api.dll"]

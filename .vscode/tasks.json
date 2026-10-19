@@ -50,10 +50,13 @@
       "problemMatcher": []
     },
     {
-      "label": "Database: reset (delete all data)",
-      "detail": "Removes the containers and the database volume. The next start re-creates the schema and seed data",
+      "label": "Database: reset (DELETES all data, stops the portal)",
+      "detail": "Asks first. Removes the containers and the database volume; start the portal again afterwards",
       "type": "shell",
-      "command": "docker compose down -v",
+      "command": "[ \"${input:confirmReset}\" = \"yes\" ] && docker compose down -v || echo Reset cancelled. Nothing was changed.",
+      "windows": {
+        "command": "if \"${input:confirmReset}\"==\"yes\" (docker compose down -v && echo Reset done. Run \"Docker: run complete portal\" to start again.) else (echo Reset cancelled. Nothing was changed.)"
+      },
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -204,6 +207,13 @@
       "description": "Account to issue an enrollment code for",
       "options": ["S001", "S002", "S003", "L001", "L002"],
       "default": "S001"
+    },
+    {
+      "id": "confirmReset",
+      "type": "pickString",
+      "description": "Delete ALL portal data (passkeys, grades, audit log) and stop the portal?",
+      "options": ["no", "yes"],
+      "default": "no"
     }
   ]
 }

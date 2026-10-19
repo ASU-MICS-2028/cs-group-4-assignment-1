@@ -19,3 +19,6 @@ appsettings.*.local.json
 
 # Part B (AES-GCM addendum) is submitted separately, not with the portal.
 partB/
+
+# Lab report is submitted on Canvas, not in the repository.
+docs/ICS570-Lab2-Evidence-Report.*
